@@ -34,8 +34,12 @@ import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuil
 import org.apache.hc.core5.util.Timeout;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.apache.hc.core5.http.message.BasicNameValuePair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class OAuthTokenClient {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(OAuthTokenClient.class);
 
   private static final URI DEFAULT_TOKEN_ENDPOINT =
       URI.create("https://auth.atlassian.com/oauth/token");
@@ -86,6 +90,8 @@ public class OAuthTokenClient {
         return new AccessToken(accessToken, clock.instant().plusSeconds(expiresIn.asLong()));
       });
     } catch (IOException e) {
+      LOGGER.warn("OAuth token request to auth.atlassian.com failed: {}: {}",
+          e.getClass().getName(), e.getMessage());
       throw new ReportPortalException(ErrorType.UNABLE_INTERACT_WITH_INTEGRATION,
           "OAuth token request failed: connection error");
     }
