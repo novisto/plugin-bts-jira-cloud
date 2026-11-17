@@ -56,7 +56,8 @@ public class OAuthTokenCache {
       if (token != null && token.expiresAt().minus(REFRESH_MARGIN).isAfter(now)) {
         return token.value();
       }
-      if (token != null && retryNotBefore != null && now.isBefore(retryNotBefore)) {
+      if (token != null && token.expiresAt().isAfter(now) && retryNotBefore != null
+          && now.isBefore(retryNotBefore)) {
         return token.value();
       }
       try {

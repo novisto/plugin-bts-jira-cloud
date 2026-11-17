@@ -211,6 +211,20 @@ class OAuthTokenCacheTest {
     assertEquals("new", cache.token(creds));
   }
 
+  @Test
+  void expiredTokenIsNotServedFromBackoffWindow() {
+    ReportPortalException failure = failure();
+    when(client.fetch("client", "s1")).thenReturn(token("old", 3600)).thenThrow(failure);
+
+    assertEquals("old", cache.token(creds));
+    clock.advance(Duration.ofSeconds(3590));
+    assertEquals("old", cache.token(creds));
+    clock.advance(Duration.ofSeconds(15));
+
+    assertSame(failure, assertThrows(ReportPortalException.class, () -> cache.token(creds)));
+    verify(client, times(3)).fetch("client", "s1");
+  }
+
   private static ReportPortalException failure() {
     return new ReportPortalException(ErrorType.UNABLE_INTERACT_WITH_INTEGRATION, "boom");
   }
