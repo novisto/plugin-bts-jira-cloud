@@ -164,8 +164,8 @@ class JiraAuthResolutionTest {
   void oauthInvalidateDelegatesToCache() {
     JiraAuth auth = provider.resolveAuth(new IntegrationParams(oauthParams()));
 
-    auth.invalidate();
+    auth.invalidate("Bearer rejected-token");
 
-    verify(cache).invalidate(new OAuthCredentials(CLOUD_ID, "cid", "secret"));
+    verify(cache).invalidate(new OAuthCredentials(CLOUD_ID, "cid", "secret"), "rejected-token");
   }
 }

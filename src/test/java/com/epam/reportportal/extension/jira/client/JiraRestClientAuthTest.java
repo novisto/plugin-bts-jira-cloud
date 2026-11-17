@@ -106,8 +106,8 @@ class JiraRestClientAuthTest {
       }
 
       @Override
-      public void invalidate() {
-        real.invalidate();
+      public void invalidate(String rejectedAuthorizationHeader) {
+        real.invalidate(rejectedAuthorizationHeader);
       }
     };
   }
@@ -140,7 +140,7 @@ class JiraRestClientAuthTest {
     assertNotNull(client.projectsApi().getProject("DO", null, null));
 
     assertEquals(List.of("Bearer t1", "Bearer t2"), authHeaders);
-    verify(cache, times(1)).invalidate(creds);
+    verify(cache, times(1)).invalidate(creds, "t1");
   }
 
   @Test
@@ -154,7 +154,7 @@ class JiraRestClientAuthTest {
         () -> client.projectsApi().getProject("DO", null, null));
 
     assertEquals(2, paths.size());
-    verify(cache, times(1)).invalidate(creds);
+    verify(cache, times(1)).invalidate(creds, "t1");
   }
 
   @Test
@@ -168,7 +168,7 @@ class JiraRestClientAuthTest {
         () -> client.projectsApi().getProject("DO", null, null));
 
     assertEquals(1, paths.size());
-    verify(cache, never()).invalidate(creds);
+    verify(cache, never()).invalidate(creds, "t1");
   }
 
   @Test

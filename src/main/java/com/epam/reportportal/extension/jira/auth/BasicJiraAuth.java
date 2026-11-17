@@ -30,7 +30,7 @@ public record BasicJiraAuth(String apiBaseUrl, String email, String apiToken) im
   }
 
   @Override
-  public void invalidate() {
+  public void invalidate(String rejectedAuthorizationHeader) {
   }
 
   @Override

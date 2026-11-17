@@ -262,17 +262,18 @@ public class PostTicketCommand extends ProjectMemberCommand<Ticket> {
   @SneakyThrows
   static void uploadAttachment(JiraAuth auth, String issueKey, byte[] data, String filename) {
     try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
-      int status = postAttachment(client, auth, issueKey, data, filename);
+      String sentHeader = auth.authorizationHeader();
+      int status = postAttachment(client, auth, sentHeader, issueKey, data, filename);
       if (status == HttpStatus.SC_UNAUTHORIZED && auth.type() == AuthType.OAUTH) {
-        auth.invalidate();
-        status = postAttachment(client, auth, issueKey, data, filename);
+        auth.invalidate(sentHeader);
+        status = postAttachment(client, auth, auth.authorizationHeader(), issueKey, data, filename);
       }
       Assert.isTrue(status == HttpStatus.SC_OK, "Failed to upload attachment");
     }
   }
 
-  private static int postAttachment(CloseableHttpClient client, JiraAuth auth, String issueKey,
-      byte[] data, String filename) throws IOException {
+  private static int postAttachment(CloseableHttpClient client, JiraAuth auth, String authorizationHeader,
+      String issueKey, byte[] data, String filename) throws IOException {
     HttpPost request = new HttpPost(
         auth.apiBaseUrl() + String.format("/rest/api/latest/issue/%s/attachments", issueKey));
     request.setEntity(MultipartEntityBuilder.create()
@@ -281,7 +282,7 @@ public class PostTicketCommand extends ProjectMemberCommand<Ticket> {
         .addBinaryBody("file", data, ContentType.DEFAULT_BINARY, filename)
         .build());
     request.setHeader("X-Atlassian-Token", "no-check");
-    request.setHeader("Authorization", auth.authorizationHeader());
+    request.setHeader("Authorization", authorizationHeader);
     return client.execute(request, response -> response.getCode());
   }
 }

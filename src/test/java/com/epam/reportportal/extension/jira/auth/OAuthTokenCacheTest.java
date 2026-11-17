@@ -107,7 +107,20 @@ class OAuthTokenCacheTest {
     when(client.fetch("client", "s1")).thenReturn(token("t1", 3600)).thenReturn(token("t2", 3600));
 
     assertEquals("t1", cache.token(creds));
-    cache.invalidate(creds);
+    cache.invalidate(creds, "t1");
+
+    assertEquals("t2", cache.token(creds));
+    verify(client, times(2)).fetch("client", "s1");
+  }
+
+  @Test
+  void staleRejectionDoesNotClearNewerToken() {
+    when(client.fetch("client", "s1")).thenReturn(token("t1", 3600)).thenReturn(token("t2", 3600));
+
+    assertEquals("t1", cache.token(creds));
+    cache.invalidate(creds, "t1");
+    assertEquals("t2", cache.token(creds));
+    cache.invalidate(creds, "t1");
 
     assertEquals("t2", cache.token(creds));
     verify(client, times(2)).fetch("client", "s1");
@@ -115,7 +128,7 @@ class OAuthTokenCacheTest {
 
   @Test
   void invalidateOfUnknownCredentialsIsHarmless() {
-    cache.invalidate(creds);
+    cache.invalidate(creds, "t0");
 
     when(client.fetch("client", "s1")).thenReturn(token("t1", 3600));
     assertEquals("t1", cache.token(creds));
@@ -191,7 +204,7 @@ class OAuthTokenCacheTest {
     when(client.fetch("client", "s1")).thenReturn(token("old", 3600)).thenThrow(failure);
 
     assertEquals("old", cache.token(creds));
-    cache.invalidate(creds);
+    cache.invalidate(creds, "old");
 
     assertSame(failure, assertThrows(ReportPortalException.class, () -> cache.token(creds)));
   }
@@ -206,7 +219,7 @@ class OAuthTokenCacheTest {
     assertEquals("old", cache.token(creds));
     clock.advance(Duration.ofMinutes(56));
     assertEquals("old", cache.token(creds));
-    cache.invalidate(creds);
+    cache.invalidate(creds, "old");
 
     assertEquals("new", cache.token(creds));
   }

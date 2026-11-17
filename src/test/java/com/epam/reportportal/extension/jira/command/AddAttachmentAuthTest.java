@@ -111,8 +111,8 @@ class AddAttachmentAuthTest {
       }
 
       @Override
-      public void invalidate() {
-        real.invalidate();
+      public void invalidate(String rejectedAuthorizationHeader) {
+        real.invalidate(rejectedAuthorizationHeader);
       }
     };
   }
@@ -146,7 +146,7 @@ class AddAttachmentAuthTest {
     upload(oauthAgainstStub(creds, cache));
 
     assertEquals(List.of("Bearer t1", "Bearer t2"), authHeaders);
-    verify(cache, times(1)).invalidate(creds);
+    verify(cache, times(1)).invalidate(creds, "t1");
     assertEquals(2, bodies.size());
     assertTrue(bodies.get(1).contains(PAYLOAD));
   }
@@ -162,7 +162,7 @@ class AddAttachmentAuthTest {
 
     assertEquals("Failed to upload attachment", ex.getMessage());
     assertEquals(2, paths.size());
-    verify(cache, times(1)).invalidate(creds);
+    verify(cache, times(1)).invalidate(creds, "t1");
   }
 
   @Test
@@ -198,6 +198,6 @@ class AddAttachmentAuthTest {
 
     assertEquals("Failed to upload attachment", ex.getMessage());
     assertEquals(1, paths.size());
-    verify(cache, never()).invalidate(creds);
+    verify(cache, never()).invalidate(creds, "t1");
   }
 }

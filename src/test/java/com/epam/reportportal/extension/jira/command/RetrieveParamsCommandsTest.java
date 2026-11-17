@@ -175,4 +175,11 @@ class RetrieveParamsCommandsTest {
 
 		assertEquals(Map.of("defectFormFields", fields), update.executeCommand(Map.of("defectFormFields", fields)));
 	}
+
+	@Test
+	void updateStoresNormalizedAuthType() {
+		Map<String, Object> result = update.executeCommand(Map.of("authType", " OAUTH "));
+
+		assertEquals("oauth", result.get("authType"));
+	}
 }

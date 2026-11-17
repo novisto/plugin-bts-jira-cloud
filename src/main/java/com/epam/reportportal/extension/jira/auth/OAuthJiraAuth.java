@@ -17,6 +17,8 @@ package com.epam.reportportal.extension.jira.auth;
 
 public record OAuthJiraAuth(OAuthCredentials creds, OAuthTokenCache cache) implements JiraAuth {
 
+  private static final String BEARER_PREFIX = "Bearer ";
+
   @Override
   public AuthType type() {
     return AuthType.OAUTH;
@@ -29,11 +31,13 @@ public record OAuthJiraAuth(OAuthCredentials creds, OAuthTokenCache cache) imple
 
   @Override
   public String authorizationHeader() {
-    return "Bearer " + cache.token(creds);
+    return BEARER_PREFIX + cache.token(creds);
   }
 
   @Override
-  public void invalidate() {
-    cache.invalidate(creds);
+  public void invalidate(String rejectedAuthorizationHeader) {
+    if (rejectedAuthorizationHeader != null && rejectedAuthorizationHeader.startsWith(BEARER_PREFIX)) {
+      cache.invalidate(creds, rejectedAuthorizationHeader.substring(BEARER_PREFIX.length()));
+    }
   }
 }

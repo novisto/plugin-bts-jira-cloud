@@ -52,7 +52,7 @@ public class RetrieveUpdateParamsCommand implements CommonPluginCommand<Map<Stri
 		CloudJiraProperties.API_TOKEN.getParam(integrationParams)
 				.ifPresent(token -> resultParams.put(CloudJiraProperties.API_TOKEN.getName(), textEncryptor.encrypt(token)));
 		CloudJiraProperties.AUTH_TYPE.getParam(integrationParams)
-				.ifPresent(authType -> resultParams.put(CloudJiraProperties.AUTH_TYPE.getName(), authType));
+				.ifPresent(authType -> resultParams.put(CloudJiraProperties.AUTH_TYPE.getName(), AuthType.from(Optional.of(authType)).getValue()));
 		CloudJiraProperties.CLIENT_ID.getParam(integrationParams)
 				.ifPresent(clientId -> resultParams.put(CloudJiraProperties.CLIENT_ID.getName(), clientId.isBlank() ? clientId : OAuthCredentials.normalizeClientId(clientId)));
 		CloudJiraProperties.CLOUD_ID.getParam(integrationParams)

@@ -39,10 +39,10 @@ public class OAuthTokenCache {
     return holders.computeIfAbsent(creds.cacheKey(), key -> new Holder()).get(creds);
   }
 
-  public void invalidate(OAuthCredentials creds) {
+  public void invalidate(OAuthCredentials creds, String rejectedToken) {
     Holder holder = holders.get(creds.cacheKey());
     if (holder != null) {
-      holder.clear();
+      holder.clearIfCurrent(rejectedToken);
     }
   }
 
@@ -72,6 +72,12 @@ public class OAuthTokenCache {
         retryNotBefore = failedAt.plus(REFRESH_RETRY_DELAY);
       }
       return token.value();
+    }
+
+    synchronized void clearIfCurrent(String rejectedToken) {
+      if (token != null && token.value().equals(rejectedToken)) {
+        clear();
+      }
     }
 
     synchronized void clear() {

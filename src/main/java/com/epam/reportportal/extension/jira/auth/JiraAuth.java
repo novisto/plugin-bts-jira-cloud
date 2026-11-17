@@ -23,5 +23,5 @@ public interface JiraAuth {
 
   String authorizationHeader();
 
-  void invalidate();
+  void invalidate(String rejectedAuthorizationHeader);
 }
