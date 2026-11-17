@@ -38,7 +38,7 @@ public class JiraAuthInterceptor implements ClientHttpRequestInterceptor {
       ClientHttpRequestExecution execution) throws IOException {
     request.getHeaders().set(HttpHeaders.AUTHORIZATION, auth.authorizationHeader());
     ClientHttpResponse response = execution.execute(request, body);
-    if (response.getStatusCode() != HttpStatus.UNAUTHORIZED) {
+    if (response.getStatusCode().value() != HttpStatus.UNAUTHORIZED.value()) {
       return response;
     }
     response.close();
