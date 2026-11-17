@@ -19,6 +19,8 @@ import static com.epam.reportportal.rules.commons.validation.BusinessRule.expect
 import static com.epam.reportportal.rules.exception.ErrorType.UNABLE_INTERACT_WITH_INTEGRATION;
 
 import com.epam.reportportal.extension.CommonPluginCommand;
+import com.epam.reportportal.extension.jira.auth.AuthType;
+import com.epam.reportportal.extension.jira.auth.OAuthCredentials;
 import com.epam.reportportal.extension.jira.command.utils.CloudJiraProperties;
 import com.epam.reportportal.rules.exception.ErrorType;
 import com.epam.reportportal.rules.exception.ReportPortalException;
@@ -61,6 +63,21 @@ public class RetrieveCreationParamsCommand implements CommonPluginCommand<Map<St
 						.orElseThrow(() -> new ReportPortalException(UNABLE_INTERACT_WITH_INTEGRATION, "BTS url is not specified."))
 		);
 
+
+		AuthType authType = AuthType.from(CloudJiraProperties.AUTH_TYPE.getParam(integrationParams));
+		resultParams.put(CloudJiraProperties.AUTH_TYPE.getName(), authType.getValue());
+
+		if (authType == AuthType.OAUTH) {
+			OAuthCredentials credentials = new OAuthCredentials(
+					CloudJiraProperties.CLOUD_ID.getParam(integrationParams).orElse(null),
+					CloudJiraProperties.CLIENT_ID.getParam(integrationParams).orElse(null),
+					CloudJiraProperties.CLIENT_SECRET.getParam(integrationParams).orElse(null)
+			);
+			resultParams.put(CloudJiraProperties.CLIENT_ID.getName(), credentials.clientId());
+			resultParams.put(CloudJiraProperties.CLIENT_SECRET.getName(), textEncryptor.encrypt(credentials.clientSecret()));
+			resultParams.put(CloudJiraProperties.CLOUD_ID.getName(), credentials.cloudId());
+			return resultParams;
+		}
 
 		resultParams.put(CloudJiraProperties.EMAIL.getName(),
 				CloudJiraProperties.EMAIL.getParam(integrationParams)

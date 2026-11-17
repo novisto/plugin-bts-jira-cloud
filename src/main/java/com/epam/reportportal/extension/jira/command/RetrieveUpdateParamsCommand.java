@@ -49,6 +49,14 @@ public class RetrieveUpdateParamsCommand implements CommonPluginCommand<Map<Stri
 		CloudJiraProperties.EMAIL.getParam(integrationParams).ifPresent(url -> resultParams.put(CloudJiraProperties.EMAIL.getName(), url));
 		CloudJiraProperties.API_TOKEN.getParam(integrationParams)
 				.ifPresent(token -> resultParams.put(CloudJiraProperties.API_TOKEN.getName(), textEncryptor.encrypt(token)));
+		CloudJiraProperties.AUTH_TYPE.getParam(integrationParams)
+				.ifPresent(authType -> resultParams.put(CloudJiraProperties.AUTH_TYPE.getName(), authType));
+		CloudJiraProperties.CLIENT_ID.getParam(integrationParams)
+				.ifPresent(clientId -> resultParams.put(CloudJiraProperties.CLIENT_ID.getName(), clientId));
+		CloudJiraProperties.CLOUD_ID.getParam(integrationParams)
+				.ifPresent(cloudId -> resultParams.put(CloudJiraProperties.CLOUD_ID.getName(), cloudId));
+		CloudJiraProperties.CLIENT_SECRET.getParam(integrationParams)
+				.ifPresent(secret -> resultParams.put(CloudJiraProperties.CLIENT_SECRET.getName(), textEncryptor.encrypt(secret)));
 		Optional.ofNullable(integrationParams.get("defectFormFields"))
 				.ifPresent(defectFormFields -> resultParams.put("defectFormFields", defectFormFields));
 		return resultParams;
