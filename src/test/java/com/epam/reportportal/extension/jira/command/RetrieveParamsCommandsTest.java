@@ -133,4 +133,33 @@ class RetrieveParamsCommandsTest {
 		assertEquals("t", encryptor.decrypt((String) result.get("apiToken")));
 		assertEquals(fields, result.get("defectFormFields"));
 	}
+
+	@Test
+	void updateRejectsUnknownAuthType() {
+		assertThrows(ReportPortalException.class, () -> update.executeCommand(Map.of("authType", "kerberos")));
+	}
+
+	@Test
+	void updateOauthStoresTrimmedValues() {
+		Map<String, Object> result = update.executeCommand(
+				Map.of("authType", "oauth", "clientId", " client-1 ", "clientSecret", " s3cret ", "cloudId", " " + CLOUD_ID + " "));
+
+		assertEquals("oauth", result.get("authType"));
+		assertEquals("client-1", result.get("clientId"));
+		assertEquals(CLOUD_ID, result.get("cloudId"));
+		assertEquals("s3cret", encryptor.decrypt((String) result.get("clientSecret")));
+	}
+
+	@Test
+	void updateOauthRejectsNonUuidCloudId() {
+		assertThrows(ReportPortalException.class,
+				() -> update.executeCommand(Map.of("authType", "oauth", "clientId", "c", "clientSecret", "s", "cloudId", "novisto")));
+	}
+
+	@Test
+	void updateWithOnlyDefectFormFieldsIsUnchanged() {
+		Map<String, Object> fields = Map.of("k", "v");
+
+		assertEquals(Map.of("defectFormFields", fields), update.executeCommand(Map.of("defectFormFields", fields)));
+	}
 }

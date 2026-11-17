@@ -17,6 +17,8 @@
 package com.epam.reportportal.extension.jira.command;
 
 import com.epam.reportportal.extension.CommonPluginCommand;
+import com.epam.reportportal.extension.jira.auth.AuthType;
+import com.epam.reportportal.extension.jira.auth.OAuthCredentials;
 import com.epam.reportportal.extension.jira.command.utils.CloudJiraProperties;
 import com.google.common.collect.Maps;
 import java.util.Map;
@@ -57,6 +59,22 @@ public class RetrieveUpdateParamsCommand implements CommonPluginCommand<Map<Stri
 				.ifPresent(cloudId -> resultParams.put(CloudJiraProperties.CLOUD_ID.getName(), cloudId));
 		CloudJiraProperties.CLIENT_SECRET.getParam(integrationParams)
 				.ifPresent(secret -> resultParams.put(CloudJiraProperties.CLIENT_SECRET.getName(), textEncryptor.encrypt(secret)));
+		boolean oauth = CloudJiraProperties.AUTH_TYPE.getParam(integrationParams)
+				.map(authType -> AuthType.from(Optional.of(authType)) == AuthType.OAUTH)
+				.orElse(false);
+		if (oauth
+				&& CloudJiraProperties.CLOUD_ID.getParam(integrationParams).isPresent()
+				&& CloudJiraProperties.CLIENT_ID.getParam(integrationParams).isPresent()
+				&& CloudJiraProperties.CLIENT_SECRET.getParam(integrationParams).isPresent()) {
+			OAuthCredentials credentials = new OAuthCredentials(
+					CloudJiraProperties.CLOUD_ID.getParam(integrationParams).get(),
+					CloudJiraProperties.CLIENT_ID.getParam(integrationParams).get(),
+					CloudJiraProperties.CLIENT_SECRET.getParam(integrationParams).get()
+			);
+			resultParams.put(CloudJiraProperties.CLOUD_ID.getName(), credentials.cloudId());
+			resultParams.put(CloudJiraProperties.CLIENT_ID.getName(), credentials.clientId());
+			resultParams.put(CloudJiraProperties.CLIENT_SECRET.getName(), textEncryptor.encrypt(credentials.clientSecret()));
+		}
 		Optional.ofNullable(integrationParams.get("defectFormFields"))
 				.ifPresent(defectFormFields -> resultParams.put("defectFormFields", defectFormFields));
 		return resultParams;
