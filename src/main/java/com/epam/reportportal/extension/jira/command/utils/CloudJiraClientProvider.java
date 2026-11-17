@@ -16,6 +16,12 @@
 
 package com.epam.reportportal.extension.jira.command.utils;
 
+import com.epam.reportportal.extension.jira.auth.AuthType;
+import com.epam.reportportal.extension.jira.auth.BasicJiraAuth;
+import com.epam.reportportal.extension.jira.auth.JiraAuth;
+import com.epam.reportportal.extension.jira.auth.OAuthCredentials;
+import com.epam.reportportal.extension.jira.auth.OAuthJiraAuth;
+import com.epam.reportportal.extension.jira.auth.OAuthTokenCache;
 import com.epam.reportportal.extension.jira.client.JiraRestClient;
 import com.epam.reportportal.rules.exception.ErrorType;
 import com.epam.reportportal.rules.exception.ReportPortalException;
@@ -33,8 +39,26 @@ public class CloudJiraClientProvider {
   private static final String API_TOKEN_NOT_SPECIFIED = "Api token is not specified.";
   private static final String URL_NOT_SPECIFIED = "Url to the Cloud Jira is not specified.";
 
-  public CloudJiraClientProvider(BasicTextEncryptor textEncryptor) {
+  private final OAuthTokenCache tokenCache;
+
+  public CloudJiraClientProvider(BasicTextEncryptor textEncryptor, OAuthTokenCache tokenCache) {
     this.textEncryptor = textEncryptor;
+    this.tokenCache = tokenCache;
+  }
+
+  public JiraAuth resolveAuth(IntegrationParams integrationParams) {
+    AuthType authType = AuthType.from(CloudJiraProperties.AUTH_TYPE.getParam(integrationParams));
+    if (authType == AuthType.OAUTH) {
+      String clientSecret = CloudJiraProperties.CLIENT_SECRET.getParam(integrationParams)
+          .map(textEncryptor::decrypt).orElse(null);
+      OAuthCredentials creds = new OAuthCredentials(
+          CloudJiraProperties.CLOUD_ID.getParam(integrationParams).orElse(null),
+          CloudJiraProperties.CLIENT_ID.getParam(integrationParams).orElse(null),
+          clientSecret);
+      return new OAuthJiraAuth(creds, tokenCache);
+    }
+    CloudJiraDetails details = extractAndDecryptDetails(integrationParams);
+    return new BasicJiraAuth(details.url(), details.username(), details.credentials());
   }
 
   public JiraRestClient getApiClient(IntegrationParams integrationParams) {

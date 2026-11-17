@@ -18,6 +18,8 @@ package com.epam.reportportal.extension.jira.command;
 
 import static com.epam.reportportal.extension.jira.utils.TestProperties.getTestProperties;
 
+import com.epam.reportportal.extension.jira.auth.OAuthTokenCache;
+import com.epam.reportportal.extension.jira.auth.OAuthTokenClient;
 import com.epam.reportportal.extension.jira.command.utils.CloudJiraClientProvider;
 import com.epam.ta.reportportal.dao.ProjectRepository;
 import com.epam.ta.reportportal.entity.integration.Integration;
@@ -28,6 +30,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -65,7 +68,8 @@ public abstract class BaseCommandTest {
     objectMapper.registerModule(new JavaTimeModule());
   }
 
-  CloudJiraClientProvider cloudJiraClientProvider = new CloudJiraClientProvider(basicTextEncryptor);
+  CloudJiraClientProvider cloudJiraClientProvider = new CloudJiraClientProvider(basicTextEncryptor,
+      new OAuthTokenCache(new OAuthTokenClient(), Clock.systemUTC()));
 
   @BeforeAll
   protected static void before() {
