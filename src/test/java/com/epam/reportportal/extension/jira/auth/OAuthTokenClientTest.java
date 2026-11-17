@@ -18,6 +18,7 @@ package com.epam.reportportal.extension.jira.auth;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.epam.reportportal.rules.exception.ReportPortalException;
@@ -33,6 +34,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,6 +51,7 @@ class OAuthTokenClientTest {
   private final AtomicReference<String> body = new AtomicReference<>();
   private volatile int status = 200;
   private volatile String responseBody = "";
+  private final CountDownLatch release = new CountDownLatch(1);
   private OAuthTokenClient client;
 
   @BeforeEach
@@ -71,6 +74,7 @@ class OAuthTokenClientTest {
 
   @AfterEach
   void tearDown() {
+    release.countDown();
     server.stop(0);
   }
 
@@ -152,18 +156,17 @@ class OAuthTokenClientTest {
     server.removeContext("/oauth/token");
     server.createContext("/oauth/token", exchange -> {
       try {
-        Thread.sleep(3000);
+        release.await();
       } catch (InterruptedException ignored) {
         Thread.currentThread().interrupt();
       }
-      exchange.close();
     });
     OAuthTokenClient fast = new OAuthTokenClient(
         URI.create("http://127.0.0.1:" + server.getAddress().getPort() + "/oauth/token"),
         Clock.fixed(NOW, ZoneOffset.UTC), Duration.ofMillis(300));
 
-    ReportPortalException e = assertThrows(ReportPortalException.class,
-        () -> fast.fetch("my-id", SECRET));
+    ReportPortalException e = assertTimeoutPreemptively(Duration.ofSeconds(2),
+        () -> assertThrows(ReportPortalException.class, () -> fast.fetch("my-id", SECRET)));
 
     assertTrue(e.getMessage().contains("OAuth token request failed: connection error"));
   }
