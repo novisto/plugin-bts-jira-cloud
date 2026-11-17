@@ -18,7 +18,7 @@ Upload that jar to ReportPortal under Administrate → Plugins.
 ## Build the plugin
 
 Preconditions:
-- Install JDK version 11.
+- Install JDK version 21.
 - Specify version number in gradle.properties file.
 
 Build the plugin: `gradlew build`
