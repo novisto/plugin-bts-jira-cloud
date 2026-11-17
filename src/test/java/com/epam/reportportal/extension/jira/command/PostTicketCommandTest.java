@@ -28,6 +28,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
+import com.epam.reportportal.extension.jira.auth.JiraAuth;
 import com.epam.reportportal.extension.jira.command.utils.JIRATicketDescriptionService;
 import com.epam.reportportal.extension.jira.utils.SampleData.WorkType;
 import com.epam.reportportal.extension.util.RequestEntityConverter;
@@ -46,7 +47,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
-import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.web.client.RestTemplate;
 
 
@@ -98,15 +101,11 @@ class PostTicketCommandTest extends BaseCommandTest {
   }
 
   private void verifyJiraTicket(Ticket ticket) {
-    String username = (String) INTEGRATION.getParams().getParams().get("email");
-    String credentials = basicTextEncryptor.decrypt((String) INTEGRATION.getParams().getParams().get("apiToken"));
-    //String url = (String) INTEGRATION.getParams().getParams().get("url");
-
-    RestTemplate restTemplate = new RestTemplateBuilder()
-        .basicAuthentication(username, credentials)
-        .build();
-
-    var jiraTicket = restTemplate.getForObject(ticket.getTicketUrl(), String.class);
+    JiraAuth auth = cloudJiraClientProvider.resolveAuth(INTEGRATION.getParams());
+    HttpHeaders headers = new HttpHeaders();
+    headers.set(HttpHeaders.AUTHORIZATION, auth.authorizationHeader());
+    new RestTemplate().exchange(auth.apiBaseUrl() + "/rest/api/latest/issue/" + ticket.getId(),
+        HttpMethod.GET, new HttpEntity<>(headers), String.class);
     log.info(ticket.getTicketUrl());
     // TODO: make required checks with jira ticket
   }

@@ -30,7 +30,11 @@ public enum CloudJiraProperties {
 	EMAIL("email"),
 	PROJECT("project"),
 	API_TOKEN("apiToken"),
-	URL("url");
+	URL("url"),
+	AUTH_TYPE("authType"),
+	CLIENT_ID("clientId"),
+	CLIENT_SECRET("clientSecret"),
+	CLOUD_ID("cloudId");
 
 	private final String name;
 

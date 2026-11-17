@@ -16,8 +16,11 @@
 
 package com.epam.reportportal.extension.jira.command;
 
+import static com.epam.reportportal.extension.jira.utils.TestProperties.getIntegrationProperties;
 import static com.epam.reportportal.extension.jira.utils.TestProperties.getTestProperties;
 
+import com.epam.reportportal.extension.jira.auth.OAuthTokenCache;
+import com.epam.reportportal.extension.jira.auth.OAuthTokenClient;
 import com.epam.reportportal.extension.jira.command.utils.CloudJiraClientProvider;
 import com.epam.ta.reportportal.dao.ProjectRepository;
 import com.epam.ta.reportportal.entity.integration.Integration;
@@ -28,7 +31,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import java.time.Clock;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +44,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-// set values in 'integration.properties' to enable the tests
+// set values in 'integration.properties' or the RP_JIRA_* environment variables to enable the tests
 @Slf4j
 @ExtendWith(MockitoExtension.class)
 public abstract class BaseCommandTest {
@@ -65,18 +70,19 @@ public abstract class BaseCommandTest {
     objectMapper.registerModule(new JavaTimeModule());
   }
 
-  CloudJiraClientProvider cloudJiraClientProvider = new CloudJiraClientProvider(basicTextEncryptor);
+  CloudJiraClientProvider cloudJiraClientProvider = new CloudJiraClientProvider(basicTextEncryptor,
+      new OAuthTokenCache(new OAuthTokenClient(), Clock.systemUTC()));
 
   @BeforeAll
   protected static void before() {
     System.setProperty("DEBUGGER_ENABLED", "true");
-    Properties integrationProps = getTestProperties("integration.properties");
+    Properties integrationProps = getIntegrationProperties();
     Map<String, Object> params = new HashMap<>();
     integrationProps.keySet()
         .stream()
         .map(String::valueOf)
         .forEach(key -> {
-          if (key.equals("apiToken")) {
+          if (key.equals("apiToken") || key.equals("clientSecret")) {
             params.put(key, basicTextEncryptor.encrypt(integrationProps.getProperty(key)));
           } else {
             params.put(key, integrationProps.getProperty(key));
@@ -94,10 +100,20 @@ public abstract class BaseCommandTest {
   }
 
   protected boolean disabled() {
-    return INTEGRATION.getParams().getParams().values()
-        .stream()
-        .map(String::valueOf)
-        .anyMatch(StringUtils::isEmpty);
+    Map<String, Object> params = INTEGRATION.getParams().getParams();
+    boolean oauth = "oauth".equalsIgnoreCase(String.valueOf(params.getOrDefault("authType", "")).trim());
+    List<String> required = oauth
+        ? List.of("url", "project", "cloudId", "clientId", "clientSecret")
+        : List.of("url", "project", "email", "apiToken");
+    return required.stream()
+        .map(key -> configuredValue(params, key))
+        .anyMatch(StringUtils::isBlank);
+  }
+
+  private static String configuredValue(Map<String, Object> params, String key) {
+    String value = String.valueOf(params.getOrDefault(key, ""));
+    boolean encrypted = key.equals("apiToken") || key.equals("clientSecret");
+    return encrypted && !value.isEmpty() ? basicTextEncryptor.decrypt(value) : value;
   }
 
 }

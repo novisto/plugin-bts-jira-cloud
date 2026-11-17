@@ -17,3 +17,10 @@ const bindMessageToValidator = (validator, errorMessage) => (value) =>
   !validator(value) ? errorMessage : undefined;
 
 export const btsJiraCloudUrl = bindMessageToValidator(jiraCloudUrl, 'btsUrlHint');
+
+const cloudId = composeValidators([
+  isNotEmpty,
+  regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i),
+]);
+
+export const cloudIdValidator = bindMessageToValidator(cloudId, 'Cloud ID must be a UUID');

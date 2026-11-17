@@ -1,6 +1,6 @@
 import React from 'react';
 import { useDispatch } from 'react-redux';
-import { LABELS } from '../constants';
+import { AUTH_TYPES, LABELS } from '../constants';
 
 export const IntegrationSettings = (props) => {
   const { data, goToPreviousPage, onUpdate, isGlobal, ...extensionProps } = props;
@@ -17,6 +17,8 @@ export const IntegrationSettings = (props) => {
 
   const dispatch = useDispatch();
 
+  const isOAuth = data.integrationParameters.authType === AUTH_TYPES.OAUTH;
+
   const fieldsConfig = [
     {
       value: data.integrationParameters.url,
@@ -26,10 +28,23 @@ export const IntegrationSettings = (props) => {
       value: data.integrationParameters.project,
       message: LABELS.PROJECT,
     },
-    {
-      value: data.integrationParameters.email,
-      message: LABELS.AUTH_BY,
-    },
+    ...(isOAuth
+      ? [
+          {
+            value: `Service account (OAuth client ${data.integrationParameters.clientId})`,
+            message: LABELS.AUTH_BY_ACCOUNT,
+          },
+          {
+            value: data.integrationParameters.cloudId,
+            message: LABELS.CLOUD_ID,
+          },
+        ]
+      : [
+          {
+            value: data.integrationParameters.email,
+            message: LABELS.AUTH_BY,
+          },
+        ]),
   ];
 
   const getConfirmationFunc = (testConnection) => (integrationData, integrationMetaData) => {

@@ -24,6 +24,8 @@ import com.epam.reportportal.extension.ReportPortalExtensionPoint;
 import com.epam.reportportal.extension.common.IntegrationTypeProperties;
 import com.epam.reportportal.extension.event.PluginEvent;
 import com.epam.reportportal.extension.event.StartLaunchEvent;
+import com.epam.reportportal.extension.jira.auth.OAuthTokenCache;
+import com.epam.reportportal.extension.jira.auth.OAuthTokenClient;
 import com.epam.reportportal.extension.jira.command.GetIssueCommand;
 import com.epam.reportportal.extension.jira.command.GetIssueFieldsCommand;
 import com.epam.reportportal.extension.jira.command.GetIssueTypesCommand;
@@ -55,6 +57,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.annotation.PostConstruct;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -148,7 +151,9 @@ public class CloudJiraExtension implements ReportPortalExtensionPoint, Disposabl
 
     requestEntityConverter = new RequestEntityConverter(objectMapper);
 
-    cloudJiraClientProviderSupplier = new MemoizingSupplier<>(() -> new CloudJiraClientProvider(textEncryptor));
+    cloudJiraClientProviderSupplier = new MemoizingSupplier<>(
+        () -> new CloudJiraClientProvider(textEncryptor,
+            new OAuthTokenCache(new OAuthTokenClient(), Clock.systemUTC())));
 
     jiraTicketDescriptionServiceSupplier = new MemoizingSupplier<>(
         () -> new JIRATicketDescriptionService(logRepository, testItemRepository));

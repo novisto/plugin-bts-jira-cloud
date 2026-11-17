@@ -16,7 +16,6 @@
 
 package com.epam.reportportal.extension.jira.command;
 
-import static com.epam.reportportal.extension.jira.command.utils.JIRATicketUtils.getAuthorizationHeader;
 import static com.epam.reportportal.extension.util.CommandParamUtils.ENTITY_PARAM;
 import static com.epam.reportportal.rules.commons.validation.BusinessRule.expect;
 import static com.epam.reportportal.rules.commons.validation.Suppliers.formattedSupplier;
@@ -36,6 +35,8 @@ import com.epam.reportportal.extension.jira.api.model.IssueUpdateDetails;
 import com.epam.reportportal.extension.jira.api.model.LinkIssueRequestJsonBean;
 import com.epam.reportportal.extension.jira.api.model.LinkedIssue;
 import com.epam.reportportal.extension.jira.api.model.ProjectComponent;
+import com.epam.reportportal.extension.jira.auth.AuthType;
+import com.epam.reportportal.extension.jira.auth.JiraAuth;
 import com.epam.reportportal.extension.jira.client.JiraRestClient;
 import com.epam.reportportal.extension.jira.command.utils.CloudJiraClientProvider;
 import com.epam.reportportal.extension.jira.command.utils.CloudJiraProperties;
@@ -51,6 +52,7 @@ import com.epam.reportportal.rules.exception.ReportPortalException;
 import com.epam.ta.reportportal.binary.DataStoreService;
 import com.epam.ta.reportportal.dao.ProjectRepository;
 import com.epam.ta.reportportal.entity.integration.Integration;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -66,12 +68,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.ThreadUtils;
-import org.apache.hc.client5.http.classic.HttpClient;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 import org.apache.hc.core5.http.ContentType;
-import org.apache.hc.core5.http.HttpResponse;
+import org.apache.hc.core5.http.HttpStatus;
 import org.springframework.util.Assert;
 import org.springframework.web.client.RestClientException;
 
@@ -253,19 +255,34 @@ public class PostTicketCommand extends ProjectMemberCommand<Ticket> {
   @SneakyThrows
   public void addAttachment(String issueKey, Integration integration, InputStream data, String filename)
       throws RestClientException {
-    var details = cloudJiraClientProvider.extractAndDecryptDetails(integration.getParams());
+    JiraAuth auth = cloudJiraClientProvider.resolveAuth(integration.getParams());
+    uploadAttachment(auth, issueKey, data.readAllBytes(), filename);
+  }
 
-    MultipartEntityBuilder entityBuilder = MultipartEntityBuilder.create()
+  @SneakyThrows
+  static void uploadAttachment(JiraAuth auth, String issueKey, byte[] data, String filename) {
+    try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
+      String sentHeader = auth.authorizationHeader();
+      int status = postAttachment(client, auth, sentHeader, issueKey, data, filename);
+      if (status == HttpStatus.SC_UNAUTHORIZED && auth.type() == AuthType.OAUTH) {
+        auth.invalidate(sentHeader);
+        status = postAttachment(client, auth, auth.authorizationHeader(), issueKey, data, filename);
+      }
+      Assert.isTrue(status == HttpStatus.SC_OK, "Failed to upload attachment");
+    }
+  }
+
+  private static int postAttachment(CloseableHttpClient client, JiraAuth auth, String authorizationHeader,
+      String issueKey, byte[] data, String filename) throws IOException {
+    HttpPost request = new HttpPost(
+        auth.apiBaseUrl() + String.format("/rest/api/latest/issue/%s/attachments", issueKey));
+    request.setEntity(MultipartEntityBuilder.create()
         .setLaxMode()
         .setCharset(StandardCharsets.UTF_8)
-        .addBinaryBody("file", data.readAllBytes(), ContentType.DEFAULT_BINARY, filename);
-
-    HttpPost request = new HttpPost(details.url() + String.format("/rest/api/latest/issue/%s/attachments", issueKey));
-    request.setEntity(entityBuilder.build());
+        .addBinaryBody("file", data, ContentType.DEFAULT_BINARY, filename)
+        .build());
     request.setHeader("X-Atlassian-Token", "no-check");
-    request.setHeader("Authorization", "Basic " + getAuthorizationHeader(details.username(), details.credentials()));
-    HttpClient client = HttpClientBuilder.create().build();
-    HttpResponse response = client.execute(request);
-    Assert.isTrue(response.getCode() == 200, "Failed to upload attachment");
+    request.setHeader("Authorization", authorizationHeader);
+    return client.execute(request, response -> response.getCode());
   }
 }

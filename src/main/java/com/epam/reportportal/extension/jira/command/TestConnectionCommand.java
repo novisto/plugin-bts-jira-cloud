@@ -29,6 +29,7 @@ import com.epam.ta.reportportal.entity.integration.IntegrationParams;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.client.RestClientResponseException;
 
 /**
  * @author <a href="mailto:pavel_bortnik@epam.com">Pavel Bortnik</a>
@@ -59,6 +60,13 @@ public class TestConnectionCommand implements PluginCommand<Boolean> {
     try {
       var jn = cloudJiraClientProvider.getApiClient(integrationParams).projectsApi().getProject(projectKey, null, null);
       return jn != null;
+    } catch (ReportPortalException e) {
+      throw e;
+    } catch (RestClientResponseException e) {
+      int status = e.getStatusCode().value();
+      LOGGER.warn("Cloud Jira returned HTTP {} for project {}", status, projectKey);
+      throw new ReportPortalException(ErrorType.UNABLE_INTERACT_WITH_INTEGRATION,
+          "Cloud Jira returned HTTP " + status + " for project " + projectKey);
     } catch (Exception e) {
       LOGGER.error("Unable to connect to Cloud Jira: ", e);
       throw new ReportPortalException(ErrorType.UNABLE_INTERACT_WITH_INTEGRATION, "Unable to connect to Cloud Jira");

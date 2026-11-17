@@ -18,12 +18,38 @@ package com.epam.reportportal.extension.jira.utils;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Map;
 import java.util.Properties;
+import java.util.function.Function;
 import lombok.SneakyThrows;
 
 public class TestProperties {
 
+  private static final Map<String, String> ENV_OVERRIDES = Map.of(
+      "url", "RP_JIRA_URL",
+      "project", "RP_JIRA_PROJECT",
+      "email", "RP_JIRA_EMAIL",
+      "apiToken", "RP_JIRA_API_TOKEN",
+      "authType", "RP_JIRA_AUTH_TYPE",
+      "cloudId", "RP_JIRA_CLOUD_ID",
+      "clientId", "RP_JIRA_CLIENT_ID",
+      "clientSecret", "RP_JIRA_CLIENT_SECRET");
+
   private TestProperties() {
+  }
+
+  public static Properties getIntegrationProperties() {
+    return applyEnvOverrides(getTestProperties("integration.properties"), System::getenv);
+  }
+
+  static Properties applyEnvOverrides(Properties properties, Function<String, String> env) {
+    ENV_OVERRIDES.forEach((key, envName) -> {
+      String value = env.apply(envName);
+      if (value != null && !value.isBlank()) {
+        properties.setProperty(key, value);
+      }
+    });
+    return properties;
   }
 
   @SneakyThrows
