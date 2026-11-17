@@ -59,6 +59,8 @@ public class TestConnectionCommand implements PluginCommand<Boolean> {
     try {
       var jn = cloudJiraClientProvider.getApiClient(integrationParams).projectsApi().getProject(projectKey, null, null);
       return jn != null;
+    } catch (ReportPortalException e) {
+      throw e;
     } catch (Exception e) {
       LOGGER.error("Unable to connect to Cloud Jira: ", e);
       throw new ReportPortalException(ErrorType.UNABLE_INTERACT_WITH_INTEGRATION, "Unable to connect to Cloud Jira");
