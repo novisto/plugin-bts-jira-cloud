@@ -28,14 +28,23 @@ public record OAuthCredentials(String cloudId, String clientId, String clientSec
   private static final String API_BASE = "https://api.atlassian.com/ex/jira/";
 
   public OAuthCredentials {
-    cloudId = requireNonBlank("cloudId", cloudId);
-    clientId = requireNonBlank("clientId", clientId);
+    cloudId = normalizeCloudId(cloudId);
+    clientId = normalizeClientId(clientId);
     clientSecret = requireNonBlank("clientSecret", clientSecret);
+  }
+
+  public static String normalizeCloudId(String cloudId) {
+    String trimmed = requireNonBlank("cloudId", cloudId);
     try {
-      UUID.fromString(cloudId);
+      UUID.fromString(trimmed);
     } catch (IllegalArgumentException e) {
       throw invalid("cloudId must be a UUID");
     }
+    return trimmed;
+  }
+
+  public static String normalizeClientId(String clientId) {
+    return requireNonBlank("clientId", clientId);
   }
 
   public String cacheKey() {

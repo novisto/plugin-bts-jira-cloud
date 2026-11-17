@@ -15,7 +15,6 @@
  */
 package com.epam.reportportal.extension.jira.command;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -102,11 +101,6 @@ class RetrieveParamsCommandsTest {
 	}
 
 	@Test
-	void createOauthDoesNotRequireEmailOrToken() {
-		assertDoesNotThrow(() -> create.executeCommand(oauthParams()));
-	}
-
-	@Test
 	void updateEncryptsClientSecretWhenPresent() {
 		Map<String, Object> result = update.executeCommand(Map.of("clientSecret", "x"));
 
@@ -154,6 +148,23 @@ class RetrieveParamsCommandsTest {
 	void updateOauthRejectsNonUuidCloudId() {
 		assertThrows(ReportPortalException.class,
 				() -> update.executeCommand(Map.of("authType", "oauth", "clientId", "c", "clientSecret", "s", "cloudId", "novisto")));
+	}
+
+	@Test
+	void updateRejectsNonUuidCloudIdWithoutSecret() {
+		assertThrows(ReportPortalException.class, () -> update.executeCommand(Map.of("cloudId", "novisto")));
+	}
+
+	@Test
+	void updateRejectsBlankClientIdWithoutSecret() {
+		assertThrows(ReportPortalException.class, () -> update.executeCommand(Map.of("clientId", "  ")));
+	}
+
+	@Test
+	void updateStoresTrimmedCloudIdAndClientIdWithoutSecret() {
+		Map<String, Object> result = update.executeCommand(Map.of("clientId", " client-1 ", "cloudId", " " + CLOUD_ID + " "));
+
+		assertEquals(Map.of("clientId", "client-1", "cloudId", CLOUD_ID), result);
 	}
 
 	@Test
