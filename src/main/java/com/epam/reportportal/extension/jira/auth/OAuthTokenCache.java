@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentMap;
 public class OAuthTokenCache {
 
   private static final Duration REFRESH_MARGIN = Duration.ofMinutes(5);
+  private static final Duration REFRESH_RETRY_DELAY = Duration.ofSeconds(30);
 
   private final OAuthTokenClient client;
   private final Clock clock;
@@ -48,17 +49,33 @@ public class OAuthTokenCache {
   private final class Holder {
 
     private AccessToken token;
+    private Instant retryNotBefore;
 
     synchronized String get(OAuthCredentials creds) {
-      if (token == null || !token.expiresAt().minus(REFRESH_MARGIN).isAfter(Instant.now(clock))) {
-        token = null;
+      Instant now = Instant.now(clock);
+      if (token != null && token.expiresAt().minus(REFRESH_MARGIN).isAfter(now)) {
+        return token.value();
+      }
+      if (token != null && retryNotBefore != null && now.isBefore(retryNotBefore)) {
+        return token.value();
+      }
+      try {
         token = client.fetch(creds.clientId(), creds.clientSecret());
+        retryNotBefore = null;
+      } catch (RuntimeException e) {
+        Instant failedAt = Instant.now(clock);
+        if (token == null || !token.expiresAt().isAfter(failedAt)) {
+          clear();
+          throw e;
+        }
+        retryNotBefore = failedAt.plus(REFRESH_RETRY_DELAY);
       }
       return token.value();
     }
 
     synchronized void clear() {
       token = null;
+      retryNotBefore = null;
     }
   }
 }

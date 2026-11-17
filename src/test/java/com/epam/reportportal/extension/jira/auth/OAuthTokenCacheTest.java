@@ -135,6 +135,87 @@ class OAuthTokenCacheTest {
   }
 
   @Test
+  void refreshFailureInsideWindowReturnsOldToken() {
+    when(client.fetch("client", "s1")).thenReturn(token("old", 3600)).thenThrow(failure());
+
+    assertEquals("old", cache.token(creds));
+    clock.advance(Duration.ofMinutes(56));
+
+    assertEquals("old", cache.token(creds));
+    verify(client, times(2)).fetch("client", "s1");
+  }
+
+  @Test
+  void refreshFailureWithExpiredTokenRethrowsOriginal() {
+    ReportPortalException failure = failure();
+    when(client.fetch("client", "s1")).thenReturn(token("old", 3600)).thenThrow(failure);
+
+    assertEquals("old", cache.token(creds));
+    clock.advance(Duration.ofMinutes(61));
+
+    assertSame(failure, assertThrows(ReportPortalException.class, () -> cache.token(creds)));
+  }
+
+  @Test
+  void noRetryWithinThirtySecondsAfterFailedRefresh() {
+    when(client.fetch("client", "s1")).thenReturn(token("old", 3600)).thenThrow(failure());
+
+    assertEquals("old", cache.token(creds));
+    clock.advance(Duration.ofMinutes(56));
+    assertEquals("old", cache.token(creds));
+    clock.advance(Duration.ofSeconds(29));
+
+    assertEquals("old", cache.token(creds));
+    verify(client, times(2)).fetch("client", "s1");
+  }
+
+  @Test
+  void retriesAfterThirtySecondsFollowingFailedRefresh() {
+    when(client.fetch("client", "s1"))
+        .thenReturn(token("old", 3600))
+        .thenThrow(failure())
+        .thenReturn(token("new", 3600));
+
+    assertEquals("old", cache.token(creds));
+    clock.advance(Duration.ofMinutes(56));
+    assertEquals("old", cache.token(creds));
+    clock.advance(Duration.ofSeconds(31));
+
+    assertEquals("new", cache.token(creds));
+    verify(client, times(3)).fetch("client", "s1");
+  }
+
+  @Test
+  void invalidatedTokenIsNeverUsedAsFallback() {
+    ReportPortalException failure = failure();
+    when(client.fetch("client", "s1")).thenReturn(token("old", 3600)).thenThrow(failure);
+
+    assertEquals("old", cache.token(creds));
+    cache.invalidate(creds);
+
+    assertSame(failure, assertThrows(ReportPortalException.class, () -> cache.token(creds)));
+  }
+
+  @Test
+  void invalidateClearsFailedRefreshBackoff() {
+    when(client.fetch("client", "s1"))
+        .thenReturn(token("old", 3600))
+        .thenThrow(failure())
+        .thenReturn(token("new", 3600));
+
+    assertEquals("old", cache.token(creds));
+    clock.advance(Duration.ofMinutes(56));
+    assertEquals("old", cache.token(creds));
+    cache.invalidate(creds);
+
+    assertEquals("new", cache.token(creds));
+  }
+
+  private static ReportPortalException failure() {
+    return new ReportPortalException(ErrorType.UNABLE_INTERACT_WITH_INTEGRATION, "boom");
+  }
+
+  @Test
   void concurrentCallersShareOneFetch() throws Exception {
     int callers = 8;
     CountDownLatch fetchStarted = new CountDownLatch(1);
