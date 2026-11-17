@@ -110,18 +110,39 @@ class OAuthTokenClientTest {
   @Test
   void non2xxGivesStatusAndErrorCodeOnly() {
     status = 401;
-    responseBody = "{\"error\":\"access_denied\",\"error_description\":\"secret-ish\"}";
+    responseBody = "{\"error\":\"access_denied\",\"error_description\":\"secret-ish " + SECRET + "\"}";
 
     ReportPortalException e = assertThrows(ReportPortalException.class,
         () -> client.fetch("my-id", SECRET));
 
     assertTrue(e.getMessage().contains("OAuth token request failed: HTTP 401, access_denied"));
     assertFalse(e.getMessage().contains("secret-ish"));
+    assertFalse(e.getMessage().contains(SECRET));
   }
 
   @Test
   void okWithoutAccessTokenFails() {
     responseBody = "{}";
+
+    ReportPortalException e = assertThrows(ReportPortalException.class,
+        () -> client.fetch("my-id", SECRET));
+
+    assertTrue(e.getMessage().contains("OAuth token request failed: HTTP 200"));
+  }
+
+  @Test
+  void okWithoutExpiresInFails() {
+    responseBody = "{\"access_token\":\"t\"}";
+
+    ReportPortalException e = assertThrows(ReportPortalException.class,
+        () -> client.fetch("my-id", SECRET));
+
+    assertTrue(e.getMessage().contains("OAuth token request failed: HTTP 200"));
+  }
+
+  @Test
+  void okWithNonNumericExpiresInFails() {
+    responseBody = "{\"access_token\":\"t\",\"expires_in\":\"soon\"}";
 
     ReportPortalException e = assertThrows(ReportPortalException.class,
         () -> client.fetch("my-id", SECRET));
@@ -138,17 +159,6 @@ class OAuthTokenClientTest {
 
     assertTrue(e.getMessage().contains("OAuth token request failed: HTTP 200"));
     assertFalse(e.getMessage().contains("proxy"));
-  }
-
-  @Test
-  void messageNeverContainsSecret() {
-    status = 400;
-    responseBody = "{\"error\":\"invalid_client\",\"error_description\":\"" + SECRET + "\"}";
-
-    ReportPortalException e = assertThrows(ReportPortalException.class,
-        () -> client.fetch("my-id", SECRET));
-
-    assertFalse(e.getMessage().contains(SECRET));
   }
 
   @Test
