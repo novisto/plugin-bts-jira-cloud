@@ -2,39 +2,28 @@ name: Build
 
 on:
   pull_request:
+    branches:
+      - novisto/5.13.x
   push:
     branches:
-      - master
-      - develop
-    paths-ignore:
-      - '.github/**'
-      - README.md
-      - gradle.properties
+      - novisto/5.13.x
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
-          distribution: 'adopt'
+          distribution: temurin
           java-version: '21'
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Setup git credentials
-        uses: oleksiyrudenko/gha-git-credentials@v2
-        with:
-          name: 'reportportal.io'
-          email: 'support@reportportal.io'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          cache: gradle
 
       - name: Build with Gradle
-        id: build
-        run: |
-          ./gradlew build
+        run: ./gradlew build

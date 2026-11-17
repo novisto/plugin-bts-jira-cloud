@@ -13,7 +13,7 @@ import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
 apply from: 'project-properties.gradle'
 
 def scriptsUrl = 'https://raw.githubusercontent.com/reportportal/gradle-scripts/' +
-        (releaseMode ? getProperty('scripts.version') : 'develop')
+        (releaseMode ? getProperty('scripts.version') : '15fec990e81003213f9801dde8a485fef94cfc93')
 
 apply from: 'ui.gradle'
 apply from: scriptsUrl + '/release-fat.gradle'
