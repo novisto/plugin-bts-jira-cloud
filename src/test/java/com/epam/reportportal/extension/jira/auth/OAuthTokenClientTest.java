@@ -28,6 +28,7 @@ import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.HashMap;
@@ -144,5 +145,26 @@ class OAuthTokenClientTest {
         () -> client.fetch("my-id", SECRET));
 
     assertFalse(e.getMessage().contains(SECRET));
+  }
+
+  @Test
+  void stalledServerTimesOutWithSafeMessage() {
+    server.removeContext("/oauth/token");
+    server.createContext("/oauth/token", exchange -> {
+      try {
+        Thread.sleep(3000);
+      } catch (InterruptedException ignored) {
+        Thread.currentThread().interrupt();
+      }
+      exchange.close();
+    });
+    OAuthTokenClient fast = new OAuthTokenClient(
+        URI.create("http://127.0.0.1:" + server.getAddress().getPort() + "/oauth/token"),
+        Clock.fixed(NOW, ZoneOffset.UTC), Duration.ofMillis(300));
+
+    ReportPortalException e = assertThrows(ReportPortalException.class,
+        () -> fast.fetch("my-id", SECRET));
+
+    assertTrue(e.getMessage().contains("OAuth token request failed: connection error"));
   }
 }
