@@ -27,10 +27,14 @@ import com.epam.reportportal.rules.exception.ErrorType;
 import com.epam.reportportal.rules.exception.ReportPortalException;
 import com.epam.ta.reportportal.entity.integration.Integration;
 import com.epam.ta.reportportal.entity.integration.IntegrationParams;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.HttpClientErrorException;
 
 class TestConnectionCommandErrorsTest {
 
@@ -71,6 +75,20 @@ class TestConnectionCommandErrorsTest {
     assertEquals(
         new ReportPortalException(ErrorType.UNABLE_INTERACT_WITH_INTEGRATION,
             "Unable to connect to Cloud Jira").getMessage(),
+        thrown.getMessage());
+  }
+
+  @Test
+  void jiraHttpErrorReportsStatusAndProject() {
+    when(provider.getApiClient(any())).thenThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND,
+        "Not Found", HttpHeaders.EMPTY, new byte[0], StandardCharsets.UTF_8));
+
+    var thrown = assertThrows(ReportPortalException.class,
+        () -> command.executeCommand(integration, new HashMap<>()));
+
+    assertEquals(
+        new ReportPortalException(ErrorType.UNABLE_INTERACT_WITH_INTEGRATION,
+            "Cloud Jira returned HTTP 404 for project PRJ").getMessage(),
         thrown.getMessage());
   }
 }

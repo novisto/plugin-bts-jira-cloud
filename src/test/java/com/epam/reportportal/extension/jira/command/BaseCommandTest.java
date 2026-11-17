@@ -106,8 +106,14 @@ public abstract class BaseCommandTest {
         ? List.of("url", "project", "cloudId", "clientId", "clientSecret")
         : List.of("url", "project", "email", "apiToken");
     return required.stream()
-        .map(key -> String.valueOf(params.getOrDefault(key, "")))
-        .anyMatch(StringUtils::isEmpty);
+        .map(key -> configuredValue(params, key))
+        .anyMatch(StringUtils::isBlank);
+  }
+
+  private static String configuredValue(Map<String, Object> params, String key) {
+    String value = String.valueOf(params.getOrDefault(key, ""));
+    boolean encrypted = key.equals("apiToken") || key.equals("clientSecret");
+    return encrypted && !value.isEmpty() ? basicTextEncryptor.decrypt(value) : value;
   }
 
 }
