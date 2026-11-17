@@ -62,8 +62,7 @@ public class CloudJiraClientProvider {
   }
 
   public JiraRestClient getApiClient(IntegrationParams integrationParams) {
-    CloudJiraDetails details = extractAndDecryptDetails(integrationParams);
-    return new JiraRestClient(details.url(), details.username(), details.credentials());
+    return new JiraRestClient(resolveAuth(integrationParams));
   }
 
 

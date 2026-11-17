@@ -25,20 +25,41 @@ import com.epam.reportportal.extension.jira.api.ProjectsApi;
 import com.epam.reportportal.extension.jira.api.UserSearchApi;
 import com.epam.reportportal.extension.jira.api.UsersApi;
 import com.epam.reportportal.extension.jira.api.client.ApiClient;
+import com.epam.reportportal.extension.jira.auth.AuthType;
+import com.epam.reportportal.extension.jira.auth.BasicJiraAuth;
+import com.epam.reportportal.extension.jira.auth.JiraAuth;
 import lombok.Getter;
+import org.springframework.http.client.BufferingClientHttpRequestFactory;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.DefaultUriBuilderFactory;
 
 @Getter
 public class JiraRestClient {
 
   private final ApiClient apiClient;
 
-  public JiraRestClient(String url, String username, String apikey) {
-
-    this.apiClient = new ApiClient();
-    this.apiClient.setBasePath(url);
-    this.apiClient.setUsername(username);
-    this.apiClient.setPassword(apikey);
+  public JiraRestClient(JiraAuth auth) {
+    if (auth.type() == AuthType.OAUTH) {
+      this.apiClient = new ApiClient(oauthRestTemplate(auth));
+      this.apiClient.setBasePath(auth.apiBaseUrl());
+    } else {
+      BasicJiraAuth basic = (BasicJiraAuth) auth;
+      this.apiClient = new ApiClient();
+      this.apiClient.setBasePath(basic.apiBaseUrl());
+      this.apiClient.setUsername(basic.email());
+      this.apiClient.setPassword(basic.apiToken());
+    }
     this.apiClient.setDebugging(Boolean.parseBoolean(System.getenv().getOrDefault("DEBUGGER_ENABLED", "false")));
+  }
+
+  private static RestTemplate oauthRestTemplate(JiraAuth auth) {
+    RestTemplate restTemplate = new RestTemplate();
+    restTemplate.setRequestFactory(new BufferingClientHttpRequestFactory(restTemplate.getRequestFactory()));
+    DefaultUriBuilderFactory uriBuilderFactory = new DefaultUriBuilderFactory();
+    uriBuilderFactory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.VALUES_ONLY);
+    restTemplate.setUriTemplateHandler(uriBuilderFactory);
+    restTemplate.getInterceptors().add(new JiraAuthInterceptor(auth));
+    return restTemplate;
   }
 
   public ProjectsApi projectsApi() {
