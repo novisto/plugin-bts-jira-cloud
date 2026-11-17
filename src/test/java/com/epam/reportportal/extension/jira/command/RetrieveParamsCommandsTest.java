@@ -156,8 +156,10 @@ class RetrieveParamsCommandsTest {
 	}
 
 	@Test
-	void updateRejectsBlankClientIdWithoutSecret() {
-		assertThrows(ReportPortalException.class, () -> update.executeCommand(Map.of("clientId", "  ")));
+	void updateStoresBlankCloudIdAndClientIdWhenSwitchingToBasic() {
+		Map<String, Object> result = update.executeCommand(Map.of("authType", "basic", "clientId", "", "cloudId", ""));
+
+		assertEquals(Map.of("authType", "basic", "clientId", "", "cloudId", ""), result);
 	}
 
 	@Test
