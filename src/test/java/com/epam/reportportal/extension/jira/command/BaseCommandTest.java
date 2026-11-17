@@ -16,6 +16,7 @@
 
 package com.epam.reportportal.extension.jira.command;
 
+import static com.epam.reportportal.extension.jira.utils.TestProperties.getIntegrationProperties;
 import static com.epam.reportportal.extension.jira.utils.TestProperties.getTestProperties;
 
 import com.epam.reportportal.extension.jira.auth.OAuthTokenCache;
@@ -43,7 +44,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-// set values in 'integration.properties' to enable the tests
+// set values in 'integration.properties' or the RP_JIRA_* environment variables to enable the tests
 @Slf4j
 @ExtendWith(MockitoExtension.class)
 public abstract class BaseCommandTest {
@@ -75,7 +76,7 @@ public abstract class BaseCommandTest {
   @BeforeAll
   protected static void before() {
     System.setProperty("DEBUGGER_ENABLED", "true");
-    Properties integrationProps = getTestProperties("integration.properties");
+    Properties integrationProps = getIntegrationProperties();
     Map<String, Object> params = new HashMap<>();
     integrationProps.keySet()
         .stream()
