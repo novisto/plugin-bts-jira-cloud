@@ -23,6 +23,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.epam.reportportal.rules.exception.ReportPortalException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class OAuthCredentialsTest {
 
@@ -41,18 +43,16 @@ class OAuthCredentialsTest {
     assertThrows(ReportPortalException.class, () -> new OAuthCredentials("novisto", "id", "s"));
   }
 
-  @Test
-  void rejectsBlankSecretWithoutLeakingIt() {
+  @ParameterizedTest
+  @CsvSource(nullValues = "NULL", value = {
+      "2335a2f3-094f-4eb5-848d-4ac3a4ef39ce, id, ' ', clientSecret",
+      "2335a2f3-094f-4eb5-848d-4ac3a4ef39ce, NULL, s, clientId",
+      "' ', id, s, cloudId"})
+  void rejectsBlankOrMissingField(String cloudId, String clientId, String clientSecret,
+      String expectedField) {
     var e = assertThrows(ReportPortalException.class,
-        () -> new OAuthCredentials(UUID_STR, "id", " "));
-    assertTrue(e.getMessage().contains("clientSecret"));
-  }
-
-  @Test
-  void rejectsNullClientId() {
-    var e = assertThrows(ReportPortalException.class,
-        () -> new OAuthCredentials(UUID_STR, null, "s"));
-    assertTrue(e.getMessage().contains("clientId"));
+        () -> new OAuthCredentials(cloudId, clientId, clientSecret));
+    assertTrue(e.getMessage().contains(expectedField));
   }
 
   @Test
