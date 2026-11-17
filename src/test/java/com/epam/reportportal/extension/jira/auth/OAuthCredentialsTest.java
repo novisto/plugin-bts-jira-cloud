@@ -68,4 +68,10 @@ class OAuthCredentialsTest {
     assertNotEquals(a, b);
     assertFalse(a.contains("s1"));
   }
+
+  @Test
+  void toStringOmitsSecret() {
+    var text = new OAuthCredentials(UUID_STR, "id", "topsecret").toString();
+    assertFalse(text.contains("topsecret"));
+  }
 }

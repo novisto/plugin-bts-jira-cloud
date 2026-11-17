@@ -32,4 +32,9 @@ public record BasicJiraAuth(String apiBaseUrl, String email, String apiToken) im
   @Override
   public void invalidate() {
   }
+
+  @Override
+  public String toString() {
+    return "BasicJiraAuth[apiBaseUrl=" + apiBaseUrl + ", email=" + email + "]";
+  }
 }
